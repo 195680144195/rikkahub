@@ -56,6 +56,14 @@ class ChatToolFactory(
     ): List<Tool> {
         val workspaceTools =
             createWorkspaceToolsIfReady(assistant.workspaceId?.toString(), workspaceCwd, conversationId)
+        val multiWorkspaceTools = if (settings.enableMultiWorkspaceTools && assistant.workspaceId != null) {
+            createMultiWorkspaceTools(
+                workspaceRepository = workspaceRepository,
+                approvals = settings.multiWorkspaceToolApprovals,
+            )
+        } else {
+            emptyList()
+        }
         val tools = buildList {
             if (assistant.enableMemory) {
                 addAll(buildMemoryTools(memoryRepository, assistant.memoryId))
@@ -68,6 +76,7 @@ class ChatToolFactory(
                 addAll(createConversationTools(conversationRepository, assistant.id))
             }
             addAll(workspaceTools)
+            addAll(multiWorkspaceTools)
             if (assistant.enabledSkills.isNotEmpty()) {
                 addAll(
                     createSkillTools(
