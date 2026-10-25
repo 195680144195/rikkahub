@@ -31,6 +31,7 @@ import me.rerere.hugeicons.stroke.ChartLineData01
 import me.rerere.hugeicons.stroke.ClipboardPaste
 import me.rerere.hugeicons.stroke.Clock01
 import me.rerere.hugeicons.stroke.JavaScript
+import me.rerere.hugeicons.stroke.Link01
 import me.rerere.hugeicons.stroke.MessageQuestion
 import me.rerere.hugeicons.stroke.SmartPhone01
 import me.rerere.hugeicons.stroke.VolumeHigh
@@ -221,6 +222,12 @@ private fun AssistantLocalToolContent(
                 icon = HugeIcons.ChartLineData01,
                 title = R.string.assistant_page_local_tools_chart_display_title,
                 description = R.string.assistant_page_local_tools_chart_display_desc,
+            )
+            toolItem(
+                option = LocalToolOption.Curl,
+                icon = HugeIcons.Link01,
+                title = R.string.assistant_page_local_tools_curl_title,
+                description = R.string.assistant_page_local_tools_curl_desc,
             )
         }
     }

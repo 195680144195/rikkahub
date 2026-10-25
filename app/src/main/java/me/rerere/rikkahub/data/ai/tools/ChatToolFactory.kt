@@ -52,6 +52,12 @@ class ChatToolFactory(
         workspaceCwd: String? = null,
     ): List<Tool> {
         val workspaceTools = createWorkspaceToolsIfReady(assistant.workspaceId?.toString(), workspaceCwd)
+        // 多工作区：一次对话可以操作所有已配置的工作区
+        val multiWorkspaceTools = if (settings.enableMultiWorkspaceTools && assistant.workspaceId != null) {
+            createMultiWorkspaceTools(workspaceRepository)
+        } else {
+            emptyList()
+        }
         val tools = buildList {
             if (assistant.enableMemory) {
                 addAll(buildMemoryTools(memoryRepository, assistant.memoryId))
@@ -64,6 +70,7 @@ class ChatToolFactory(
                 addAll(createConversationTools(conversationRepository, assistant.id))
             }
             addAll(workspaceTools)
+            addAll(multiWorkspaceTools)
             if (assistant.enabledSkills.isNotEmpty()) {
                 addAll(
                     createSkillTools(
