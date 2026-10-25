@@ -1936,4 +1936,8 @@ mDNS 地址：使用 .local 主机名，同一网络中的其他设备可通过�
   <string name="setting_page_preferences_notification_battery_optimization">忽略电池优化</string>
   <string name="setting_page_preferences_notification_battery_optimization_on">已允许。后台生成被系统中断的可能性更低</string>
   <string name="setting_page_preferences_notification_battery_optimization_off">未允许。系统可能会为节省电量而停止后台生成</string>
+  <string name="assistant_page_local_tools_curl_title">Curl / HTTP 请求</string>
+  <string name="assistant_page_local_tools_curl_desc">发送 HTTP 请求（GET/POST/PUT/PATCH/DELETE），支持请求头、JSON body 与表单。</string>
+  <string name="workspace_page_multi_tools_title">多工作区工具</string>
+  <string name="workspace_page_multi_tools_desc">允许一次对话同时操作多个工作区。</string>
 </resources>

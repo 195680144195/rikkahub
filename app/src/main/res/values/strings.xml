@@ -1934,4 +1934,8 @@
   <string name="quick_start_page_deepseek_configure">Set up DeepSeek</string>
   <string name="setting_page_quick_start">Quick Start</string>
   <string name="setting_page_quick_start_desc">Set up providers and models step by step, or migrate from DeepSeek</string>
+  <string name="assistant_page_local_tools_curl_title">Curl / HTTP request</string>
+  <string name="assistant_page_local_tools_curl_desc">Send HTTP requests (GET/POST/PUT/PATCH/DELETE) with headers, JSON body or form.</string>
+  <string name="workspace_page_multi_tools_title">Multi-workspace tools</string>
+  <string name="workspace_page_multi_tools_desc">Operate several workspaces in one conversation.</string>
 </resources>

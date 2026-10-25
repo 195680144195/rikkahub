@@ -38,6 +38,10 @@ sealed class LocalToolOption {
     data object ChartDisplay : LocalToolOption()
 
     @Serializable
+    @SerialName("curl")
+    data object Curl : LocalToolOption()
+
+    @Serializable
     @SerialName("phone_use")
     data object PhoneUse : LocalToolOption()
 }

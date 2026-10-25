@@ -52,6 +52,8 @@ data class Settings(
     // 翻译页的目标语言，存 BCP 47 语言标签
     val translateTargetLanguage: String = "zh-CN",
     val enableSuggestion: Boolean = true,
+    // 多工作区工具组（工作区页面可开关）
+    val enableMultiWorkspaceTools: Boolean = true,
     val suggestionPrompt: String = DEFAULT_SUGGESTION_PROMPT,
     // 回复结束后上下文占用达到聊天模型上下文窗口的 autoCompressThreshold 时自动压缩历史
     val enableAutoCompress: Boolean = true,
