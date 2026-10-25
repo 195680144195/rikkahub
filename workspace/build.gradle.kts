@@ -7,18 +7,18 @@ android {
     namespace = "me.rerere.workspace"
 
     defaultConfig {
-        externalNativeBuild {
-            cmake {
-                cppFlags += ""
-            }
-        }
+    // externalNativeBuild {
+    // cmake {
+    // cppFlags += ""
+    // }
+    // }
     }
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
+    // externalNativeBuild {
+    // cmake {
+    // path = file("src/main/cpp/CMakeLists.txt")
+    // version = "3.22.1"
+    // }
+    // }
 }
 
 dependencies {

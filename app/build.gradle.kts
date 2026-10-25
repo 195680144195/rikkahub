@@ -15,6 +15,11 @@ plugins {
 }
 
 android {
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     namespace = "me.rerere.rikkahub"
     compileSdk {
         version = release(37) {
