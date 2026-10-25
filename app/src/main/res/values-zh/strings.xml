@@ -1786,4 +1786,8 @@ mDNS 地址：使用 .local 主机名，同一网络中的其他设备可通过�
   <string name="setting_model_page_memory_model">记忆整理模型</string>
   <string name="setting_model_page_memory_model_desc">用于在后台将对话整理为长期记忆的模型；未设置时使用快速模型</string>
   <string name="setting_model_page_memory_model_follow_fast">跟随快速模型</string>
+  <string name="assistant_page_local_tools_curl_title">Curl / HTTP 请求</string>
+  <string name="assistant_page_local_tools_curl_desc">发送 HTTP 请求（GET/POST/PUT/PATCH/DELETE），支持请求头、body 与表单；不依赖工作区喵。</string>
+  <string name="workspace_page_multi_tools_title">多工作区工具</string>
+  <string name="workspace_page_multi_tools_desc">允许一次对话同时操作多个工作区；未绑定工作区的助手不显示。</string>
 </resources>

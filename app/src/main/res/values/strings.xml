@@ -1784,4 +1784,8 @@
   <string name="setting_model_page_memory_model">Memory Consolidation Model</string>
   <string name="setting_model_page_memory_model_desc">Model used to organize conversations into long-term memory in the background; uses the fast model when not set</string>
   <string name="setting_model_page_memory_model_follow_fast">Same as fast model</string>
+  <string name="assistant_page_local_tools_curl_title">Curl / HTTP request</string>
+  <string name="assistant_page_local_tools_curl_desc">Send HTTP requests (GET/POST/PUT/PATCH/DELETE), with headers, body or form. Works without a workspace.</string>
+  <string name="workspace_page_multi_tools_title">Multi-workspace tools</string>
+  <string name="workspace_page_multi_tools_desc">Let a conversation operate several workspaces. Hidden when the assistant has no workspace bound.</string>
 </resources>
