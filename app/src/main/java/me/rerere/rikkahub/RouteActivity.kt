@@ -98,6 +98,7 @@ import me.rerere.rikkahub.ui.pages.extensions.QuickMessagesPage
 import me.rerere.rikkahub.ui.pages.extensions.skills.SkillDetailPage
 import me.rerere.rikkahub.ui.pages.memory.MemoryFilePage
 import me.rerere.rikkahub.ui.pages.extensions.skills.SkillsPage
+import me.rerere.rikkahub.ui.pages.extensions.workspace.MultiWorkspaceSettingsPage
 import me.rerere.rikkahub.ui.pages.extensions.workspace.WorkspacePage
 import me.rerere.rikkahub.ui.pages.extensions.workspace.WorkspaceDetailPage
 import me.rerere.rikkahub.ui.pages.extensions.workspace.WorkspaceFileEditorPage
@@ -565,6 +566,10 @@ class RouteActivity : ComponentActivity() {
                                 WorkspacePage()
                             }
 
+                            entry<Screen.MultiWorkspaceSettings> {
+                                MultiWorkspaceSettingsPage()
+                            }
+
                             entry<Screen.WorkspaceDetail> { key ->
                                 WorkspaceDetailPage(key.id)
                             }
@@ -803,6 +808,9 @@ sealed interface Screen : NavKey {
 
     @Serializable
     data object Workspaces : Screen
+
+    @Serializable
+    data object MultiWorkspaceSettings : Screen
 
     @Serializable
     data class WorkspaceDetail(val id: String) : Screen
