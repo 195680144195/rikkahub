@@ -68,9 +68,17 @@ suspend fun createMultiWorkspaceTools(
                         add(buildJsonObject {
                             put("id", w.id)
                             put("name", w.name)
-                            put("type", w.type)
+                            put("type", w.type)              // LOCAL = 本机 proot rootfs, SSH = 远程机器
+                            put("kind", if (w.isSsh()) "ssh" else "proot")
                             put("root", w.root)
                             put("shell_status", w.shellStatus)
+                            put("capabilities", buildJsonObject {
+                                val cap = w.capabilities()
+                                put("rootfs", cap.rootfs)
+                                put("terminal", cap.terminal)
+                                put("localFiles", cap.localFiles)
+                                put("fileWriteTools", cap.fileWriteTools)
+                            })
                         })
                     }
                 }
@@ -202,6 +210,24 @@ suspend fun createMultiWorkspaceTools(
                 val path = p.str("path") ?: error("path is required")
                 val text = p.str("text") ?: error("text is required")
                 val overwrite = p.str("overwrite")?.toBooleanStrictOrNull() ?: true
+
+                // SSH 工作区不支持直接写文件（SFTP 覆盖会先清空文件，断线会留下残缺文件）
+                if (!ws.capabilities().fileWriteTools) {
+                    val hint = buildString {
+                        append("工作区 \"${ws.name}\" 类型为 ${ws.type}，不支持直接写文件工具。")
+                        append("请改用 workspace_exec，把内容写进远程文件，例如：")
+                        append("`cat > @path <<'KOKONA_EOF'` + 内容 + `KOKONA_EOF`")
+                        append("（或用 base64 传输二进制）")
+                    }.replace("@path", path)
+                    return@Tool listOf(UIMessagePart.Text(buildJsonObject {
+                        put("workspace", ws.name)
+                        put("type", ws.type)
+                        put("path", path)
+                        put("rejected", true)
+                        put("error", hint)
+                    }.toString()))
+                }
+
                 val entry = workspaceRepository.writeText(ws.id, path, text, overwrite)
                 listOf(UIMessagePart.Text(buildJsonObject {
                     put("workspace", ws.name)
