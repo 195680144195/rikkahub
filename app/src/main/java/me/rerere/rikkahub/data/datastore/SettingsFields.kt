@@ -105,6 +105,9 @@ internal val SETTINGS_FIELDS: List<SettingsField<*, *>> = with(SettingsStore) {
         plain(ENABLE_SUGGESTION, Settings::enableSuggestion) { copy(enableSuggestion = it) },
         uuid(IMAGE_GENERATION_MODEL, Settings::imageGenerationModelId) { copy(imageGenerationModelId = it) },
         plain(ENABLE_AUTO_TITLE, Settings::enableAutoTitle) { copy(enableAutoTitle = it) },
+        // 多工作区工具
+        plain(ENABLE_MULTI_WORKSPACE_TOOLS, Settings::enableMultiWorkspaceTools) { copy(enableMultiWorkspaceTools = it) },
+        json(MULTI_WORKSPACE_TOOL_APPROVALS, Settings::multiWorkspaceToolApprovals) { copy(multiWorkspaceToolApprovals = it) },
         plain(TITLE_PROMPT, Settings::titlePrompt) { copy(titlePrompt = it) },
         plain(TRANSLATION_PROMPT, Settings::translatePrompt) { copy(translatePrompt = it) },
         plain(TRANSLATE_THINKING_BUDGET, Settings::translateThinkingBudget) { copy(translateThinkingBudget = it) },
