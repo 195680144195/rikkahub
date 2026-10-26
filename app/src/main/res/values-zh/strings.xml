@@ -1790,4 +1790,14 @@ mDNS 地址：使用 .local 主机名，同一网络中的其他设备可通过�
   <string name="assistant_page_local_tools_curl_desc">发送 HTTP 请求（GET/POST/PUT/PATCH/DELETE），支持请求头、body 与表单；不依赖工作区喵。</string>
   <string name="workspace_page_multi_tools_title">多工作区工具</string>
   <string name="workspace_page_multi_tools_desc">允许一次对话同时操作多个工作区；未绑定工作区的助手不显示。</string>
+  <string name="multi_ws_page_title">多工作区工具</string>
+  <string name="multi_ws_master_title">启用多工作区工具</string>
+  <string name="multi_ws_master_desc">仅对已绑定工作区的助手显示 workspace_list / exec / read / write。</string>
+  <string name="multi_ws_tools_title">单工具审批</string>
+  <string name="multi_ws_tools_desc">开启后，调用该工具前会弹确认。</string>
+  <string name="multi_ws_needs_approval_desc">执行前需要确认</string>
+  <string name="multi_ws_tool_list_title">workspace_list（列出工作区）</string>
+  <string name="multi_ws_tool_exec_title">workspace_exec（执行命令）</string>
+  <string name="multi_ws_tool_read_title">workspace_read（读取文件）</string>
+  <string name="multi_ws_tool_write_title">workspace_write（写入文件）</string>
 </resources>

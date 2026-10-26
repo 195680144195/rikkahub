@@ -1788,4 +1788,14 @@
   <string name="assistant_page_local_tools_curl_desc">Send HTTP requests (GET/POST/PUT/PATCH/DELETE), with headers, body or form. Works without a workspace.</string>
   <string name="workspace_page_multi_tools_title">Multi-workspace tools</string>
   <string name="workspace_page_multi_tools_desc">Let a conversation operate several workspaces. Hidden when the assistant has no workspace bound.</string>
+  <string name="multi_ws_page_title">Multi-workspace tools</string>
+  <string name="multi_ws_master_title">Enable multi-workspace tools</string>
+  <string name="multi_ws_master_desc">Show workspace_list / exec / read / write for assistants that have a workspace bound.</string>
+  <string name="multi_ws_tools_title">Per-tool approval</string>
+  <string name="multi_ws_tools_desc">Ask for confirmation before running that tool.</string>
+  <string name="multi_ws_needs_approval_desc">Ask before executing</string>
+  <string name="multi_ws_tool_list_title">workspace_list</string>
+  <string name="multi_ws_tool_exec_title">workspace_exec</string>
+  <string name="multi_ws_tool_read_title">workspace_read</string>
+  <string name="multi_ws_tool_write_title">workspace_write</string>
 </resources>

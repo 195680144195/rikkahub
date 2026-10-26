@@ -54,7 +54,10 @@ class ChatToolFactory(
         val workspaceTools = createWorkspaceToolsIfReady(assistant.workspaceId?.toString(), workspaceCwd)
         // 多工作区：一次对话可以操作所有已配置的工作区
         val multiWorkspaceTools = if (settings.enableMultiWorkspaceTools && assistant.workspaceId != null) {
-            createMultiWorkspaceTools(workspaceRepository)
+            createMultiWorkspaceTools(
+                workspaceRepository = workspaceRepository,
+                approvals = settings.multiWorkspaceToolApprovals,
+            )
         } else {
             emptyList()
         }

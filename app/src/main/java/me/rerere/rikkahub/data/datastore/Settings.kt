@@ -54,6 +54,11 @@ data class Settings(
     val enableSuggestion: Boolean = true,
     // 多工作区工具组（工作区页面可开关）
     val enableMultiWorkspaceTools: Boolean = true,
+    // 多工作区工具的执行审批（toolName -> 是否需要确认）
+    val multiWorkspaceToolApprovals: Map<String, Boolean> = mapOf(
+        "workspace_exec" to true,
+        "workspace_write" to true,
+    ),
     val suggestionPrompt: String = DEFAULT_SUGGESTION_PROMPT,
     val ocrModelId: Uuid = Uuid.random(),
     val ocrPrompt: String = DEFAULT_OCR_PROMPT,

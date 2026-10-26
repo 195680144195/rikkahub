@@ -31,7 +31,9 @@ private const val MW_TIMEOUT_MAX_SECONDS = 600L
  */
 suspend fun createMultiWorkspaceTools(
     workspaceRepository: WorkspaceRepository,
+    approvals: Map<String, Boolean> = emptyMap(),
 ): List<Tool> {
+    fun approval(name: String, default: Boolean): Boolean = approvals[name] ?: default
     suspend fun all(): List<WorkspaceEntity> = workspaceRepository.listFlow().first()
 
     suspend fun resolve(key: String): WorkspaceEntity {
@@ -108,7 +110,7 @@ suspend fun createMultiWorkspaceTools(
                     required = listOf("workspace", "command"),
                 )
             },
-            needsApproval = { true },
+            needsApproval = { approval("workspace_exec", true) },
             execute = { raw ->
                 val p = raw.jsonObject()
                 val ws = resolve(p.str("workspace") ?: error("workspace is required"))
@@ -193,7 +195,7 @@ suspend fun createMultiWorkspaceTools(
                     required = listOf("workspace", "path", "text"),
                 )
             },
-            needsApproval = { true },
+            needsApproval = { approval("workspace_write", true) },
             execute = { raw ->
                 val p = raw.jsonObject()
                 val ws = resolve(p.str("workspace") ?: error("workspace is required"))
