@@ -37,6 +37,9 @@ internal fun buildCurlTool(): Tool = Tool(
         Send an HTTP request and return the response as readable text. Works without a workspace.
         Supports GET/POST/PUT/PATCH/DELETE/HEAD, custom headers, raw body or urlencoded form,
         redirects, timeout and HTML-to-text conversion. Use raw=true to keep HTML source.
+        NOT for downloading files: this tool only returns text (max 2MB, HTML converted to text),
+        it cannot save binary files. To download a file, run the system curl inside a workspace via
+        workspace_exec, e.g. `curl -L -o out.zip <url>`.
     """.trimIndent().replace("\n", " "),
     parameters = {
         InputSchema.Obj(
