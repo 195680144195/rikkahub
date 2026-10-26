@@ -108,6 +108,10 @@ class SettingsStore internal constructor(
         val NETWORK_SETTING = stringPreferencesKey("network_setting")
         val DEVELOPER_MODE = booleanPreferencesKey("developer_mode")
 
+        // 多工作区工具
+        val ENABLE_MULTI_WORKSPACE_TOOLS = booleanPreferencesKey("enable_multi_workspace_tools")
+        val MULTI_WORKSPACE_TOOL_APPROVALS = stringPreferencesKey("multi_workspace_tool_approvals")
+
         // 模型选择
         val FAVORITE_MODELS = stringPreferencesKey("favorite_models")
         val SELECT_MODEL = stringPreferencesKey("chat_model")
