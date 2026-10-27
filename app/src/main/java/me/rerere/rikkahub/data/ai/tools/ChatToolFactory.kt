@@ -8,6 +8,7 @@ import me.rerere.ai.provider.BuiltInTools
 import me.rerere.ai.provider.Model
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.data.ai.mcp.McpManager
+import me.rerere.rikkahub.data.ai.subagent.SubagentManager
 import me.rerere.rikkahub.data.ai.tools.local.LocalTools
 import me.rerere.rikkahub.data.datastore.Settings
 import me.rerere.rikkahub.data.files.FileFolders
@@ -44,12 +45,14 @@ class ChatToolFactory(
     private val mcpManager: McpManager,
     private val skillManager: SkillManager,
     private val workspaceRepository: WorkspaceRepository,
+    private val subagentManager: SubagentManager,
 ) {
     suspend fun createTools(
         settings: Settings,
         assistant: Assistant,
         model: Model,
         workspaceCwd: String? = null,
+        conversationId: Uuid? = null,
     ): List<Tool> {
         val workspaceTools = createWorkspaceToolsIfReady(assistant.workspaceId?.toString(), workspaceCwd)
         // 多工作区：一次对话可以操作所有已配置的工作区
@@ -69,6 +72,9 @@ class ChatToolFactory(
                 addAll(createSearchTools(settings))
             }
             addAll(localTools.getTools(assistant.localTools))
+            if (settings.enableSubagents && conversationId != null) {
+                addAll(createSubagentTools(subagentManager, conversationId))
+            }
             if (assistant.enableRecentChatsReference) {
                 addAll(createConversationTools(conversationRepository, assistant.id))
             }

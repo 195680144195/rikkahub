@@ -26,6 +26,11 @@ data class ConversationConfig(
     val mcpServers: Set<Uuid> = emptySet(),
     val workspaceId: Uuid? = null,
     val enabledSkills: Set<String> = emptySet(),
+    // 子智能体：kind = MAIN | SUBAGENT
+    val kind: String = "MAIN",
+    val parentId: Uuid? = null,
+    val subagentTitle: String? = null,
+    val subagentStatus: String? = null,
 )
 
 // 内置搜索是模型的开关，不在助手上，由调用方另行填入

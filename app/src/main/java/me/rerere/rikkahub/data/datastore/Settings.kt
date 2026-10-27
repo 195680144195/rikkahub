@@ -26,6 +26,20 @@ import me.rerere.search.SearchServiceOptions
 import me.rerere.tts.provider.TTSProviderSetting
 import kotlin.uuid.Uuid
 
+val DEFAULT_SUBAGENT_PROMPT = """
+    你是主会话派发的子智能体，只负责完成交给你的任务。
+    - 不要向用户提问，也不要等待确认
+    - 不要调用任何 subagent_ 开头的工具
+    - 完成后必须按下面的格式输出：
+    ## 交付
+    状态: ok | failed | stopped
+    总结: 一句话结论
+    做了什么:
+    - ...
+    产出: 文件路径或链接（没有就写“无”）
+    建议下一步: ...
+""".trimIndent()
+
 @Serializable
 data class Settings(
     @Transient
@@ -59,6 +73,12 @@ data class Settings(
         "workspace_exec" to true,
         "workspace_write" to true,
     ),
+    // 子智能体
+    val enableSubagents: Boolean = true,
+    val subagentPrompt: String = DEFAULT_SUBAGENT_PROMPT,
+    val subagentMaxConcurrent: Int = 3,
+    val subagentMaxSteps: Int = 8,
+    val subagentAutoContinue: Boolean = true,
     val suggestionPrompt: String = DEFAULT_SUGGESTION_PROMPT,
     val ocrModelId: Uuid = Uuid.random(),
     val ocrPrompt: String = DEFAULT_OCR_PROMPT,

@@ -101,6 +101,15 @@ val appModule = module {
     }
 
     single {
+        me.rerere.rikkahub.data.ai.subagent.SubagentManager(
+            settingsStore = get(),
+            conversationRepository = get(),
+            providerManager = get(),
+            appScope = get(),
+        )
+    }
+
+    single {
         ChatToolFactory(
             context = get(),
             memoryRepository = get(),
@@ -109,6 +118,7 @@ val appModule = module {
             mcpManager = get(),
             skillManager = get(),
             workspaceRepository = get(),
+            subagentManager = get(),
         )
     }
 

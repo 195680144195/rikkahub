@@ -108,6 +108,11 @@ internal val SETTINGS_FIELDS: List<SettingsField<*, *>> = with(SettingsStore) {
         // 多工作区工具
         plain(ENABLE_MULTI_WORKSPACE_TOOLS, Settings::enableMultiWorkspaceTools) { copy(enableMultiWorkspaceTools = it) },
         json(MULTI_WORKSPACE_TOOL_APPROVALS, Settings::multiWorkspaceToolApprovals) { copy(multiWorkspaceToolApprovals = it) },
+        plain(ENABLE_SUBAGENTS, Settings::enableSubagents) { copy(enableSubagents = it) },
+        plain(SUBAGENT_PROMPT, Settings::subagentPrompt) { copy(subagentPrompt = it) },
+        plain(SUBAGENT_MAX_CONCURRENT, Settings::subagentMaxConcurrent) { copy(subagentMaxConcurrent = it) },
+        plain(SUBAGENT_MAX_STEPS, Settings::subagentMaxSteps) { copy(subagentMaxSteps = it) },
+        plain(SUBAGENT_AUTO_CONTINUE, Settings::subagentAutoContinue) { copy(subagentAutoContinue = it) },
         plain(TITLE_PROMPT, Settings::titlePrompt) { copy(titlePrompt = it) },
         plain(TRANSLATION_PROMPT, Settings::translatePrompt) { copy(translatePrompt = it) },
         plain(TRANSLATE_THINKING_BUDGET, Settings::translateThinkingBudget) { copy(translateThinkingBudget = it) },

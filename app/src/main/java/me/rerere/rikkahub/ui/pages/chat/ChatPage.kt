@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyListState
@@ -72,6 +73,7 @@ import me.rerere.rikkahub.data.repository.WorkspaceRepository
 import me.rerere.rikkahub.service.ChatError
 import me.rerere.rikkahub.ui.components.ai.ChatAttachmentPickerActions
 import me.rerere.rikkahub.ui.components.ai.ChatInput
+import me.rerere.rikkahub.ui.components.chat.SubagentBar
 import me.rerere.rikkahub.ui.components.ai.FilesPicker
 import me.rerere.rikkahub.ui.components.ai.SearchMode
 import me.rerere.rikkahub.ui.components.ai.completion.WorkspaceCompletionProvider
@@ -340,8 +342,10 @@ private fun ChatPageContent(
                 )
             },
             bottomBar = {
+                Column(modifier = Modifier.fillMaxWidth()) {
                 val messageQueue by vm.messageQueue.collectAsStateWithLifecycle()
                 val voiceState by vm.voiceSession.state.collectAsStateWithLifecycle()
+                SubagentBar(conversationId = conversation.id, modifier = Modifier.padding(top = 4.dp))
                 ChatInput(
                     onStartVoiceMode = onStartVoiceMode,
                     voiceState = voiceState,
@@ -400,6 +404,8 @@ private fun ChatPageContent(
                         showFilesSheet = true
                     },
                 )
+            
+                }
             },
             containerColor = Color.Transparent,
         ) { innerPadding ->

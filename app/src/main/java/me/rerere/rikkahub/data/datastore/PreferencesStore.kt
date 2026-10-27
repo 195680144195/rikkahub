@@ -112,6 +112,13 @@ class SettingsStore internal constructor(
         val ENABLE_MULTI_WORKSPACE_TOOLS = booleanPreferencesKey("enable_multi_workspace_tools")
         val MULTI_WORKSPACE_TOOL_APPROVALS = stringPreferencesKey("multi_workspace_tool_approvals")
 
+        // 子智能体
+        val ENABLE_SUBAGENTS = booleanPreferencesKey("enable_subagents")
+        val SUBAGENT_PROMPT = stringPreferencesKey("subagent_prompt")
+        val SUBAGENT_MAX_CONCURRENT = intPreferencesKey("subagent_max_concurrent")
+        val SUBAGENT_MAX_STEPS = intPreferencesKey("subagent_max_steps")
+        val SUBAGENT_AUTO_CONTINUE = booleanPreferencesKey("subagent_auto_continue")
+
         // 模型选择
         val FAVORITE_MODELS = stringPreferencesKey("favorite_models")
         val SELECT_MODEL = stringPreferencesKey("chat_model")
