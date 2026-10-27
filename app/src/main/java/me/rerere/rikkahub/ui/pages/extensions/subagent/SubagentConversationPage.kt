@@ -3,18 +3,13 @@ package me.rerere.rikkahub.ui.pages.extensions.subagent
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -34,11 +29,16 @@ import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.data.model.Conversation
 import me.rerere.rikkahub.data.repository.ConversationRepository
+import me.rerere.rikkahub.ui.components.message.ChatMessage
 import me.rerere.rikkahub.ui.components.nav.BackButton
 import me.rerere.rikkahub.ui.theme.CustomColors
 import org.koin.compose.koinInject
 import kotlin.uuid.Uuid
 
+/**
+ * 子代理会话（只读）：
+ * 直接复用主会话的 [ChatMessage] 渲染，保证工具卡片、思考、正文风格完全一致。
+ */
 @Composable
 fun SubagentConversationPage(id: String) {
     val repository: ConversationRepository = koinInject()
@@ -84,28 +84,20 @@ fun SubagentConversationPage(id: String) {
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(nodes) { node ->
-                val message = node.currentMessage
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = message.role.name,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        message.parts.filterIsInstance<UIMessagePart.Text>().forEach { part ->
-                            Text(text = part.text, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
+                ChatMessage(
+                    node = node,
+                    loading = false,
+                    onFork = {},
+                    onRegenerate = {},
+                    onEdit = {},
+                    onShare = {},
+                    onDelete = {},
+                    onUpdate = {},
+                )
             }
         }
     }

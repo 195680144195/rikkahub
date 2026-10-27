@@ -5,6 +5,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.flow.StateFlow
@@ -173,7 +174,8 @@ class SubagentManager(
                     append("\n\n[主会话提供的背景]\n").append(context)
                 }
             }
-            val params = backgroundTextGenerationParams(ctx.model, child.id)
+            // 关键：必须把工具声明放进 params，否则模型看不到工具，会退化成输出 <tool_call> 文本
+            val params = backgroundTextGenerationParams(ctx.model, child.id).copy(tools = tools)
             val hooks = object : AgentHooks {
                 override suspend fun prepareStep(messages: List<UIMessage>): StepRequest {
                     return StepRequest(
@@ -183,7 +185,10 @@ class SubagentManager(
                 }
             }
 
-            val finished = runAgent(
+            // 收集每一步的助手消息（同一 id 覆盖），完整保留工具调用过程
+            val stepMessages = LinkedHashMap<String, UIMessage>()
+            var finishedEvent: AgentEvent.Finished? = null
+            runAgent(
                 request = AgentRequest(
                     provider = providerManager.getProviderByType(ctx.providerSetting),
                     providerSetting = ctx.providerSetting,
@@ -194,11 +199,17 @@ class SubagentManager(
                     retry = settings.retryPolicy(),
                 ),
                 hooks = hooks,
-            ).filterIsInstance<AgentEvent.Finished>().lastOrNull()
-                ?: run {
-                    deliver(run, "（子代理未完成：可能被中断或需要审批）", STATUS_FAILED, childId)
-                    return
+            ).collect { event ->
+                when (event) {
+                    is AgentEvent.MessageUpdated -> stepMessages[event.message.id.toString()] = event.message
+                    is AgentEvent.Finished -> finishedEvent = event
+                    else -> Unit
                 }
+            }
+            val finished = finishedEvent ?: run {
+                deliver(run, "（子代理未完成：可能被中断或等待审批）", STATUS_FAILED, childId)
+                return
+            }
 
             val text = finished.message.parts
                 .filterIsInstance<UIMessagePart.Text>()
@@ -206,9 +217,11 @@ class SubagentManager(
                 .ifBlank { "（子代理没有输出文本）" }
 
             val doneChild = conversationRepository.getConversationById(child.id) ?: child
+            val allNodes = doneChild.messageNodes +
+                stepMessages.values.map { MessageNode.of(it) }
             conversationRepository.updateConversation(
                 doneChild.copy(
-                    messageNodes = doneChild.messageNodes + MessageNode.of(finished.message),
+                    messageNodes = allNodes,
                     updateAt = Instant.now(),
                     config = doneChild.config?.copy(subagentStatus = STATUS_DONE),
                 )
