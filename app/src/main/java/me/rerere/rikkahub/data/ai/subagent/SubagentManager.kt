@@ -203,7 +203,8 @@ class SubagentManager(
                 hooks = hooks,
             ).collect { event ->
                 when (event) {
-                    is AgentEvent.MessageUpdated -> stepMessages[event.message.id.toString()] = event.message
+                    is AgentEvent.MessageUpdated ->
+                        stepMessages[event.message.id.toString()] = sanitizeMessage(event.message)
                     is AgentEvent.Finished -> finishedEvent = event
                     else -> Unit
                 }
@@ -213,9 +214,12 @@ class SubagentManager(
                 return
             }
 
-            val text = finished.message.parts
+            val finalAssistant = stepMessages.values.lastOrNull { it.role == me.rerere.ai.core.MessageRole.ASSISTANT }
+                ?: finished.message
+            val text = finalAssistant.parts
                 .filterIsInstance<UIMessagePart.Text>()
                 .joinToString("\n") { it.text }
+                .trim()
                 .ifBlank { "（子代理没有输出文本）" }
 
             val doneChild = conversationRepository.getConversationById(child.id) ?: child
@@ -239,6 +243,21 @@ class SubagentManager(
             jobs.remove(run.id)
             _runs.update { list -> list.filterNot { it.id == run.id } }
         }
+    }
+
+    /** 去掉思考段与伪造的 <tool_call> 文本，避免它们被当成普通消息展示 */
+    private fun sanitizeMessage(message: UIMessage): UIMessage {
+        val cleaned = message.parts.mapNotNull { part ->
+            if (part is UIMessagePart.Text) {
+                var t = part.text
+                if (t.contains("<｜end▁of▁thinking｜>")) t = t.substringAfterLast("<｜end▁of▁thinking｜>")
+                t = t.replace(Regex("(?s)<tool_call>.*?</tool_call>"), " ")
+                t = t.replace(Regex("(?s)```tool_call.*?```"), " ")
+                t = t.trim()
+                if (t.isEmpty()) null else part.copy(text = t)
+            } else part
+        }
+        return message.copy(parts = cleaned)
     }
 
     private suspend fun awaitApproval(run: Run, toolName: String, argsPreview: String): Boolean {
