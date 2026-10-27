@@ -18,6 +18,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,6 +53,8 @@ fun SubagentDeliveryCard(
         else -> status
     }
     val body = part.text.substringAfter("\n\n", part.text)
+    var expanded by remember { mutableStateOf(false) }
+    val collapsible = body.length > 160 || body.count { it == '\n' } >= 4
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -96,7 +102,24 @@ fun SubagentDeliveryCard(
             }
 
             Spacer(Modifier.height(8.dp))
-            Text(text = body, style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = if (expanded) Int.MAX_VALUE else 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            if (collapsible) {
+                TextButton(
+                    onClick = { expanded = !expanded },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                ) {
+                    Text(
+                        text = if (expanded) "收起" else "展开",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+            }
 
             if (id.isNotBlank()) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) {
