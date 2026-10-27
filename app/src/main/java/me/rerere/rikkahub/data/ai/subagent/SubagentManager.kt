@@ -52,10 +52,29 @@ class SubagentManager(
         val startedAt: Long,
     )
 
+    data class PendingApproval(
+        val runId: Uuid,
+        val toolName: String,
+        val argsPreview: String,
+        val deferred: kotlinx.coroutines.CompletableDeferred<Boolean>,
+    )
+
     private val _runs = MutableStateFlow<List<Run>>(emptyList())
     val runs: StateFlow<List<Run>> = _runs.asStateFlow()
 
+    private val _pendingApprovals = MutableStateFlow<Map<Uuid, PendingApproval>>(emptyMap())
+    val pendingApprovals: StateFlow<Map<Uuid, PendingApproval>> = _pendingApprovals.asStateFlow()
+
+    fun approve(runId: Uuid, allow: Boolean) {
+        _pendingApprovals.value[runId]?.deferred?.complete(allow)
+    }
+
     private val jobs = ConcurrentHashMap<Uuid, Job>()
+
+    // 自动续跑：500ms 防抖 + 每会话最多 5 次无用户输入的续跑
+    private val deliveryBuffer = ConcurrentHashMap<Uuid, MutableList<String>>()
+    private val flushJobs = ConcurrentHashMap<Uuid, Job>()
+    private val autoContinueCount = ConcurrentHashMap<Uuid, Int>()
 
     fun runningOf(parentId: Uuid): List<Run> =
         _runs.value.filter { it.parentId == parentId && it.status == STATUS_RUNNING }
@@ -75,6 +94,7 @@ class SubagentManager(
             startedAt = System.currentTimeMillis(),
         )
         _runs.update { it + run }
+        autoContinueCount[parentId] = 0
         val job = appScope.launch(Dispatchers.IO) { execute(run, task, context) }
         jobs[run.id] = job
         return run
@@ -117,7 +137,21 @@ class SubagentManager(
             // 审批 UI 在下一阶段接到任务条上。
             val tools = ctx.tools
                 .filterNot { it.name.startsWith(SUBAGENT_TOOL_PREFIX) }
-                .map { it.copy(needsApproval = { false }) }
+                .map { original ->
+                    original.copy(
+                        needsApproval = { false },
+                        execute = { args ->
+                            val needs = runCatching { original.needsApproval(args) }.getOrDefault(false)
+                            if (needs) {
+                                val allowed = awaitApproval(run, original.name, args.toString().take(200))
+                                if (!allowed) {
+                                    error("用户拒绝了子代理的工具调用：${original.name}")
+                                }
+                            }
+                            original.execute(args)
+                        },
+                    )
+                }
 
             val system = buildString {
                 if (ctx.assistant.systemPrompt.isNotBlank()) {
@@ -182,22 +216,70 @@ class SubagentManager(
         }
     }
 
+    private suspend fun awaitApproval(run: Run, toolName: String, argsPreview: String): Boolean {
+        val deferred = kotlinx.coroutines.CompletableDeferred<Boolean>()
+        _pendingApprovals.update {
+            it + (run.id to PendingApproval(run.id, toolName, argsPreview, deferred))
+        }
+        return try {
+            deferred.await()
+        } finally {
+            _pendingApprovals.update { it - run.id }
+        }
+    }
+
     private suspend fun deliver(run: Run, text: String, status: String) {
         runCatching {
-            val parent = conversationRepository.getConversationById(run.parentId) ?: return
             val header = when (status) {
                 STATUS_DONE -> "【子代理交付】${run.title}"
                 STATUS_FAILED -> "【子代理失败】${run.title}"
                 else -> "【子代理已停止】${run.title}"
             }
             val content = "$header\n\n$text"
-            conversationRepository.updateConversation(
-                parent.copy(
-                    messageNodes = parent.messageNodes + MessageNode.of(UIMessage.user(content)),
-                    updateAt = Instant.now(),
-                )
-            )
+            val settings = settingsStore.settingsFlow.value
+            if (settings.subagentAutoContinue) {
+                scheduleAutoContinue(run.parentId, content)
+            } else {
+                appendDirect(run.parentId, content)
+            }
         }.onFailure { Log.e(TAG, "deliver failed", it) }
+    }
+
+    /** 交付先入缓冲，500ms 内的多条合并成一次续跑 */
+    private fun scheduleAutoContinue(parentId: Uuid, content: String) {
+        deliveryBuffer.getOrPut(parentId) { mutableListOf() }.add(content)
+        flushJobs.remove(parentId)?.cancel()
+        flushJobs[parentId] = appScope.launch {
+            kotlinx.coroutines.delay(500)
+            flushDeliveries(parentId)
+        }
+    }
+
+    private suspend fun flushDeliveries(parentId: Uuid) {
+        val parts = deliveryBuffer.remove(parentId)?.map { UIMessagePart.Text(it) } ?: return
+        if (parts.isEmpty()) return
+        val count = autoContinueCount.getOrDefault(parentId, 0)
+        if (count >= 5) {
+            // 达到自动续跑上限，只落库不再触发模型
+            parts.forEach { appendDirect(parentId, it.text) }
+            return
+        }
+        autoContinueCount[parentId] = count + 1
+        runCatching {
+            val chatService: me.rerere.rikkahub.service.ChatService =
+                org.koin.java.KoinJavaComponent.getKoin().get()
+            chatService.sendMessage(parentId, parts, answer = true)
+        }.onFailure { Log.e(TAG, "auto continue failed", it) }
+    }
+
+    private suspend fun appendDirect(parentId: Uuid, content: String) {
+        val parent = conversationRepository.getConversationById(parentId) ?: return
+        conversationRepository.updateConversation(
+            parent.copy(
+                messageNodes = parent.messageNodes + MessageNode.of(UIMessage.user(content)),
+                updateAt = Instant.now(),
+            )
+        )
     }
 
     companion object {

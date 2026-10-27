@@ -47,6 +47,7 @@ fun SubagentBar(
     val manager: SubagentManager = koinInject()
     val navController = LocalNavController.current
     val runs by manager.runs.collectAsStateWithLifecycle()
+    val pending by manager.pendingApprovals.collectAsStateWithLifecycle()
     val active = runs.filter { it.parentId == conversationId }
     var expanded by remember { mutableStateOf(false) }
 
@@ -86,6 +87,16 @@ fun SubagentBar(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f).clickable { open(only) },
                     )
+                    val approval = pending[only.id]
+                    if (approval != null) {
+                        Text(
+                            text = "待审批: ${approval.toolName}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        TextButton(onClick = { manager.approve(only.id, true) }) { Text("✓") }
+                        TextButton(onClick = { manager.approve(only.id, false) }) { Text("✗") }
+                    }
                     TextButton(onClick = { manager.stop(only.id) }) {
                         Text("停止")
                     }
@@ -131,6 +142,11 @@ fun SubagentBar(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
                             )
+                            val approval = pending[run.id]
+                            if (approval != null) {
+                                TextButton(onClick = { manager.approve(run.id, true) }) { Text("✓") }
+                                TextButton(onClick = { manager.approve(run.id, false) }) { Text("✗") }
+                            }
                             TextButton(onClick = { manager.stop(run.id) }) {
                                 Text("停止")
                             }
