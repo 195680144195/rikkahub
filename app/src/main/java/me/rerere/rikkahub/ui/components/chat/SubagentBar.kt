@@ -5,10 +5,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -123,7 +126,12 @@ fun SubagentBar(
                 enter = expandVertically(expandFrom = Alignment.Bottom),
                 exit = shrinkVertically(shrinkTowards = Alignment.Bottom),
             ) {
-                Column(modifier = Modifier.padding(bottom = 6.dp)) {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 240.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 6.dp),
+                ) {
                     active.forEach { run ->
                         Row(
                             modifier = Modifier

@@ -97,6 +97,7 @@ fun SubagentConversationPage(id: String) {
                     onShare = {},
                     onDelete = {},
                     onUpdate = {},
+                    readOnly = true,
                 )
             }
         }

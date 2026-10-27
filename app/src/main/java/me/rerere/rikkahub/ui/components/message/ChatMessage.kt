@@ -124,6 +124,7 @@ fun ChatMessage(
     onClearTranslation: (UIMessage) -> Unit = {},
     onToolApproval: ((toolCallId: String, approved: Boolean, reason: String) -> Unit)? = null,
     onToolAnswer: ((toolCallId: String, answer: String) -> Unit)? = null,
+    readOnly: Boolean = false,
 ) {
     val message = node.messages[node.selectIndex]
     if (message.isContextCheckpoint) {
@@ -198,7 +199,9 @@ fun ChatMessage(
             }
         }
 
-        val showActions = if (lastMessage) {
+        val showActions = if (readOnly) {
+            false
+        } else if (lastMessage) {
             !loading
         } else {
             message.parts.isEmptyUIMessage().not()

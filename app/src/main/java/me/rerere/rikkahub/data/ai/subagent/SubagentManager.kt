@@ -170,6 +170,8 @@ class SubagentManager(
                 }
                 append("[子智能体规范]\n")
                 append(settings.subagentPrompt)
+                append("\n\n可用工具（必须通过原生 tool call 调用，禁止编造工具名或输出 <tool_call> 文本）：\n")
+                append(tools.joinToString("\n") { "- ${it.name}" })
                 if (!context.isNullOrBlank()) {
                     append("\n\n[主会话提供的背景]\n").append(context)
                 }
