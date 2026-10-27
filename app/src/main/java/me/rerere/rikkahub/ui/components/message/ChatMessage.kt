@@ -64,6 +64,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import me.rerere.ai.core.MessageRole
 import me.rerere.ai.provider.Model
@@ -388,6 +389,10 @@ private fun MessagePartsBlock(
             is MessagePartBlock.ContentBlock -> key(block.index) {
                 when (val part = block.part) {
                     is UIMessagePart.Text -> {
+                        val subagentId = part.metadata?.get("subagentId")?.jsonPrimitive?.contentOrNull
+                        if (!subagentId.isNullOrBlank()) {
+                            SubagentDeliveryCard(part = part)
+                        } else {
                         // 只有正在生成的最后一段文字可能停在没写完的语法上
                         val streamingText = loading && block.index == parts.lastIndex
                         val textContent = @Composable {
@@ -449,6 +454,7 @@ private fun MessagePartsBlock(
                         }
                     }
 
+                    }
                     is UIMessagePart.Video -> {
                         ChatMessageMediaTile(
                             icon = HugeIcons.Video01,

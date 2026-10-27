@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.put
 import me.rerere.ai.agent.AgentEvent
 import me.rerere.ai.agent.AgentHooks
 import me.rerere.ai.agent.AgentRequest
@@ -69,10 +70,19 @@ class SubagentManager(
         _pendingApprovals.value[runId]?.deferred?.complete(allow)
     }
 
+    init {
+        appScope.launch {
+            runCatching { conversationRepository.markInterruptedSubagents() }
+                .onFailure { Log.e(TAG, "mark interrupted failed", it) }
+        }
+    }
+
     private val jobs = ConcurrentHashMap<Uuid, Job>()
 
     // 自动续跑：500ms 防抖 + 每会话最多 5 次无用户输入的续跑
-    private val deliveryBuffer = ConcurrentHashMap<Uuid, MutableList<String>>()
+    private data class Delivery(val text: String, val meta: kotlinx.serialization.json.JsonObject)
+
+    private val deliveryBuffer = ConcurrentHashMap<Uuid, MutableList<Delivery>>()
     private val flushJobs = ConcurrentHashMap<Uuid, Job>()
     private val autoContinueCount = ConcurrentHashMap<Uuid, Int>()
 
@@ -186,7 +196,7 @@ class SubagentManager(
                 hooks = hooks,
             ).filterIsInstance<AgentEvent.Finished>().lastOrNull()
                 ?: run {
-                    deliver(run, "（子代理未完成：可能被中断或需要审批）", STATUS_FAILED)
+                    deliver(run, "（子代理未完成：可能被中断或需要审批）", STATUS_FAILED, childId)
                     return
                 }
 
@@ -203,13 +213,13 @@ class SubagentManager(
                     config = doneChild.config?.copy(subagentStatus = STATUS_DONE),
                 )
             )
-            deliver(run, text, STATUS_DONE)
+            deliver(run, text, STATUS_DONE, childId)
         } catch (e: CancellationException) {
-            deliver(run, "（子代理已停止）", STATUS_CANCELLED)
+            deliver(run, "（子代理已停止）", STATUS_CANCELLED, childId)
             throw e
         } catch (t: Throwable) {
             Log.e(TAG, "subagent ${run.id} failed", t)
-            deliver(run, "（子代理失败：${t.message ?: t.javaClass.simpleName}）", STATUS_FAILED)
+            deliver(run, "（子代理失败：${t.message ?: t.javaClass.simpleName}）", STATUS_FAILED, childId)
         } finally {
             jobs.remove(run.id)
             _runs.update { list -> list.filterNot { it.id == run.id } }
@@ -228,7 +238,7 @@ class SubagentManager(
         }
     }
 
-    private suspend fun deliver(run: Run, text: String, status: String) {
+    private suspend fun deliver(run: Run, text: String, status: String, childId: Uuid?) {
         runCatching {
             val header = when (status) {
                 STATUS_DONE -> "【子代理交付】${run.title}"
@@ -236,18 +246,24 @@ class SubagentManager(
                 else -> "【子代理已停止】${run.title}"
             }
             val content = "$header\n\n$text"
+            val meta = kotlinx.serialization.json.buildJsonObject {
+                put("subagentId", childId?.toString().orEmpty())
+                put("subagentTitle", run.title)
+                put("subagentStatus", status)
+            }
+            val delivery = Delivery(content, meta)
             val settings = settingsStore.settingsFlow.value
             if (settings.subagentAutoContinue) {
-                scheduleAutoContinue(run.parentId, content)
+                scheduleAutoContinue(run.parentId, delivery)
             } else {
-                appendDirect(run.parentId, content)
+                appendDirect(run.parentId, delivery)
             }
         }.onFailure { Log.e(TAG, "deliver failed", it) }
     }
 
     /** 交付先入缓冲，500ms 内的多条合并成一次续跑 */
-    private fun scheduleAutoContinue(parentId: Uuid, content: String) {
-        deliveryBuffer.getOrPut(parentId) { mutableListOf() }.add(content)
+    private fun scheduleAutoContinue(parentId: Uuid, delivery: Delivery) {
+        deliveryBuffer.getOrPut(parentId) { mutableListOf() }.add(delivery)
         flushJobs.remove(parentId)?.cancel()
         flushJobs[parentId] = appScope.launch {
             kotlinx.coroutines.delay(500)
@@ -256,27 +272,36 @@ class SubagentManager(
     }
 
     private suspend fun flushDeliveries(parentId: Uuid) {
-        val parts = deliveryBuffer.remove(parentId)?.map { UIMessagePart.Text(it) } ?: return
-        if (parts.isEmpty()) return
+        val items = deliveryBuffer.remove(parentId) ?: return
+        if (items.isEmpty()) return
         val count = autoContinueCount.getOrDefault(parentId, 0)
         if (count >= 5) {
             // 达到自动续跑上限，只落库不再触发模型
-            parts.forEach { appendDirect(parentId, it.text) }
+            items.forEach { appendDirect(parentId, it) }
             return
         }
         autoContinueCount[parentId] = count + 1
         runCatching {
             val chatService: me.rerere.rikkahub.service.ChatService =
                 org.koin.java.KoinJavaComponent.getKoin().get()
-            chatService.sendMessage(parentId, parts, answer = true)
+            chatService.sendMessage(
+                parentId,
+                items.map { UIMessagePart.Text(it.text, it.meta) },
+                answer = true,
+            )
         }.onFailure { Log.e(TAG, "auto continue failed", it) }
     }
 
-    private suspend fun appendDirect(parentId: Uuid, content: String) {
+    private suspend fun appendDirect(parentId: Uuid, delivery: Delivery) {
         val parent = conversationRepository.getConversationById(parentId) ?: return
         conversationRepository.updateConversation(
             parent.copy(
-                messageNodes = parent.messageNodes + MessageNode.of(UIMessage.user(content)),
+                messageNodes = parent.messageNodes + MessageNode.of(
+                    UIMessage(
+                        role = me.rerere.ai.core.MessageRole.USER,
+                        parts = listOf(UIMessagePart.Text(delivery.text, delivery.meta)),
+                    )
+                ),
                 updateAt = Instant.now(),
             )
         )

@@ -291,6 +291,23 @@ class ConversationRepository(
             }
         }
 
+    /** App 启动时把上次残留的 RUNNING 子代理标记为中断 */
+    suspend fun markInterruptedSubagents() {
+        val running = runCatching { conversationDAO.getRunningSubagents() }.getOrElse { return }
+        running.forEach { entity ->
+            val config = runCatching {
+                JsonInstant.decodeFromString<me.rerere.rikkahub.data.model.ConversationConfig>(entity.config)
+            }.getOrNull() ?: return@forEach
+            if (config.kind != "SUBAGENT" || config.subagentStatus != "RUNNING") return@forEach
+            conversationDAO.update(
+                entity.copy(
+                    config = JsonInstant.encodeToString(config.copy(subagentStatus = "INTERRUPTED")),
+                    updateAt = System.currentTimeMillis(),
+                )
+            )
+        }
+    }
+
     suspend fun getConversationById(uuid: Uuid): Conversation? {
         val entity = conversationDAO.getConversationById(uuid.toString())
         return if (entity != null) {
