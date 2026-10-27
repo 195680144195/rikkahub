@@ -6,7 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -110,7 +110,11 @@ class SubagentManager(
             val requestFactory: ChatRequestFactory = org.koin.java.KoinJavaComponent.getKoin().get()
             val ctx = requestFactory.createContext(settings, child)
             // 子代理不能再派生子代理
-            val tools = ctx.tools.filterNot { it.name.startsWith(SUBAGENT_TOOL_PREFIX) }
+            // 第一版：子代理在后台跑，没有人能点审批，所以子工具一律自动放行；
+            // 审批 UI 在下一阶段接到任务条上。
+            val tools = ctx.tools
+                .filterNot { it.name.startsWith(SUBAGENT_TOOL_PREFIX) }
+                .map { it.copy(needsApproval = { false }) }
 
             val system = buildString {
                 if (ctx.assistant.systemPrompt.isNotBlank()) {
@@ -143,7 +147,11 @@ class SubagentManager(
                     retry = settings.retryPolicy(),
                 ),
                 hooks = hooks,
-            ).filterIsInstance<AgentEvent.Finished>().last()
+            ).filterIsInstance<AgentEvent.Finished>().lastOrNull()
+                ?: run {
+                    deliver(run, "（子代理未完成：可能被中断或需要审批）", STATUS_FAILED)
+                    return
+                }
 
             val text = finished.message.parts
                 .filterIsInstance<UIMessagePart.Text>()
