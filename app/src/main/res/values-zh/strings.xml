@@ -1800,4 +1800,22 @@ mDNS 地址：使用 .local 主机名，同一网络中的其他设备可通过�
   <string name="multi_ws_tool_exec_title">workspace_exec（执行命令）</string>
   <string name="multi_ws_tool_read_title">workspace_read（读取文件）</string>
   <string name="multi_ws_tool_write_title">workspace_write（写入文件）</string>
+  <string name="subagent_settings_title">子智能体</string>
+  <string name="subagent_enable_title">启用子智能体</string>
+  <string name="subagent_enable_desc">允许助手把任务交给后台子代理执行。</string>
+  <string name="subagent_prompt_title">子代理规范提示词</string>
+  <string name="subagent_prompt_desc">会追加在主助手提示词之后，对每个子代理生效。</string>
+  <string name="subagent_concurrency_title">最大并发子代理</string>
+  <string name="subagent_concurrency_desc">超出数量的任务会排队。</string>
+  <string name="subagent_max_steps_title">子代理最大步数</string>
+  <string name="subagent_max_steps_desc">单次子任务允许请求模型的最大次数。</string>
+  <string name="subagent_auto_continue_title">完成后自动继续主会话</string>
+  <string name="subagent_auto_continue_desc">子代理结束时，自动发起一轮来消费交付内容。</string>
+  <string name="subagent_save">保存</string>
+  <string name="subagent_stop">停止</string>
+  <string name="subagent_readonly_title">子代理会话（只读）</string>
+  <string name="subagent_copy_all">复制全部</string>
+  <string name="subagent_bar_stop_all">全部停止</string>
+  <string name="extensions_page_subagents">子智能体</string>
+  <string name="extensions_page_subagents_desc">把任务交给后台子代理执行</string>
 </resources>

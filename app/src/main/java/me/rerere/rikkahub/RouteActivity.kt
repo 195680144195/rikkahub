@@ -98,6 +98,8 @@ import me.rerere.rikkahub.ui.pages.extensions.QuickMessagesPage
 import me.rerere.rikkahub.ui.pages.extensions.skills.SkillDetailPage
 import me.rerere.rikkahub.ui.pages.memory.MemoryFilePage
 import me.rerere.rikkahub.ui.pages.extensions.skills.SkillsPage
+import me.rerere.rikkahub.ui.pages.extensions.subagent.SubagentConversationPage
+import me.rerere.rikkahub.ui.pages.extensions.subagent.SubagentSettingsPage
 import me.rerere.rikkahub.ui.pages.extensions.workspace.MultiWorkspaceSettingsPage
 import me.rerere.rikkahub.ui.pages.extensions.workspace.WorkspacePage
 import me.rerere.rikkahub.ui.pages.extensions.workspace.WorkspaceDetailPage
@@ -570,6 +572,14 @@ class RouteActivity : ComponentActivity() {
                                 MultiWorkspaceSettingsPage()
                             }
 
+                            entry<Screen.SubagentSettings> {
+                                SubagentSettingsPage()
+                            }
+
+                            entry<Screen.SubagentConversation> { key ->
+                                SubagentConversationPage(key.id)
+                            }
+
                             entry<Screen.WorkspaceDetail> { key ->
                                 WorkspaceDetailPage(key.id)
                             }
@@ -811,6 +821,12 @@ sealed interface Screen : NavKey {
 
     @Serializable
     data object MultiWorkspaceSettings : Screen
+
+    @Serializable
+    data object SubagentSettings : Screen
+
+    @Serializable
+    data class SubagentConversation(val id: String) : Screen
 
     @Serializable
     data class WorkspaceDetail(val id: String) : Screen

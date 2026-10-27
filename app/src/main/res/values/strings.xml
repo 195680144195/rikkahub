@@ -1798,4 +1798,22 @@
   <string name="multi_ws_tool_exec_title">workspace_exec</string>
   <string name="multi_ws_tool_read_title">workspace_read</string>
   <string name="multi_ws_tool_write_title">workspace_write</string>
+  <string name="subagent_settings_title">Sub-agents</string>
+  <string name="subagent_enable_title">Enable sub-agents</string>
+  <string name="subagent_enable_desc">Allow the assistant to delegate tasks to background sub-agents.</string>
+  <string name="subagent_prompt_title">Sub-agent rules</string>
+  <string name="subagent_prompt_desc">Appended to the main assistant prompt for every sub-agent.</string>
+  <string name="subagent_concurrency_title">Max concurrent sub-agents</string>
+  <string name="subagent_concurrency_desc">Extra tasks wait in a queue.</string>
+  <string name="subagent_max_steps_title">Max steps per sub-agent</string>
+  <string name="subagent_max_steps_desc">Upper bound of model calls for one sub-agent run.</string>
+  <string name="subagent_auto_continue_title">Auto continue main chat</string>
+  <string name="subagent_auto_continue_desc">When a sub-agent finishes, start a new turn to consume its delivery.</string>
+  <string name="subagent_save">Save</string>
+  <string name="subagent_stop">Stop</string>
+  <string name="subagent_readonly_title">Sub-agent conversation (read-only)</string>
+  <string name="subagent_copy_all">Copy all</string>
+  <string name="subagent_bar_stop_all">Stop all</string>
+  <string name="extensions_page_subagents">Sub-agents</string>
+  <string name="extensions_page_subagents_desc">Delegate tasks to background sub-agents</string>
 </resources>

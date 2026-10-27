@@ -63,6 +63,9 @@ class SubagentManager(
     fun spawn(parentId: Uuid, title: String, task: String, context: String?): Run {
         require(title.isNotBlank()) { "title 不能为空" }
         require(task.isNotBlank()) { "task 不能为空" }
+        val max = settingsStore.settingsFlow.value.subagentMaxConcurrent.coerceAtLeast(1)
+        val running = _runs.value.count { it.parentId == parentId && it.status == STATUS_RUNNING }
+        require(running < max) { "并发已达上限 $max，请等待其他子代理完成" }
         val run = Run(
             id = Uuid.random(),
             parentId = parentId,
