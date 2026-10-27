@@ -3,6 +3,7 @@ package me.rerere.rikkahub.ui.components.chat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,9 +36,8 @@ import org.koin.compose.koinInject
 import kotlin.uuid.Uuid
 
 /**
- * 子代理任务条：
- * - 1 个：直接显示条目（点击进入只读子会话，右侧停止）
- * - ≥2 个：显示「N 个子代理」，点击展开；展开时从底向上生长
+ * 子代理任务条：与输入框同一套视觉（surface + 细边框 + 圆角）。
+ * 1 个直接显示；≥2 个合并计数，点击向上展开。
  */
 @Composable
 fun SubagentBar(
@@ -63,77 +63,76 @@ fun SubagentBar(
 
     Surface(
         modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 2.dp,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        tonalElevation = 1.dp,
     ) {
         Column {
-            // 头部：单条显示标题，多条显示数量
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(enabled = active.size > 1) { expanded = !expanded }
-                    .padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
                 Spacer(Modifier.width(8.dp))
+
                 if (active.size == 1) {
                     val only = active.first()
                     Text(
                         text = only.title,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f).clickable { open(only) },
                     )
-                    val approval = pending[only.id]
-                    if (approval != null) {
-                        Text(
-                            text = "待审批: ${approval.toolName}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        TextButton(onClick = { manager.approve(only.id, true) }) { Text("✓") }
-                        TextButton(onClick = { manager.approve(only.id, false) }) { Text("✗") }
-                    }
-                    TextButton(onClick = { manager.stop(only.id) }) {
-                        Text("停止")
-                    }
-                } else {
-                    Text(
-                        text = "${active.size} 个子代理",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
+                    ApprovalOrStop(
+                        approvalTool = pending[only.id]?.toolName,
+                        onApprove = { manager.approve(only.id, true) },
+                        onReject = { manager.approve(only.id, false) },
+                        onStop = { manager.stop(only.id) },
                     )
+                } else {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "${active.size} 个子代理",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            text = "点击展开",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     TextButton(onClick = { active.forEach { manager.stop(it.id) } }) {
-                        Text("全部停止")
+                        Text("全部停止", style = MaterialTheme.typography.labelMedium)
                     }
                     Text(
                         text = if (expanded) "⌄" else "⌃",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = 8.dp),
+                        modifier = Modifier.padding(end = 4.dp),
                     )
                 }
             }
 
-            // 展开列表：从底向上生长
             AnimatedVisibility(
                 visible = expanded && active.size > 1,
                 enter = expandVertically(expandFrom = Alignment.Bottom),
                 exit = shrinkVertically(shrinkTowards = Alignment.Bottom),
             ) {
-                Column {
+                Column(modifier = Modifier.padding(bottom = 6.dp)) {
                     active.forEach { run ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { open(run) }
-                                .padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+                                .padding(start = 12.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 1.5.dp)
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 text = run.title,
@@ -142,18 +141,36 @@ fun SubagentBar(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
                             )
-                            val approval = pending[run.id]
-                            if (approval != null) {
-                                TextButton(onClick = { manager.approve(run.id, true) }) { Text("✓") }
-                                TextButton(onClick = { manager.approve(run.id, false) }) { Text("✗") }
-                            }
-                            TextButton(onClick = { manager.stop(run.id) }) {
-                                Text("停止")
-                            }
+                            ApprovalOrStop(
+                                approvalTool = pending[run.id]?.toolName,
+                                onApprove = { manager.approve(run.id, true) },
+                                onReject = { manager.approve(run.id, false) },
+                                onStop = { manager.stop(run.id) },
+                            )
                         }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ApprovalOrStop(
+    approvalTool: String?,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+    onStop: () -> Unit,
+) {
+    if (approvalTool != null) {
+        Text(
+            text = approvalTool,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error,
+            maxLines = 1,
+        )
+        TextButton(onClick = onApprove) { Text("✓", style = MaterialTheme.typography.labelLarge) }
+        TextButton(onClick = onReject) { Text("✗", style = MaterialTheme.typography.labelLarge) }
+    }
+    TextButton(onClick = onStop) { Text("停止", style = MaterialTheme.typography.labelMedium) }
 }

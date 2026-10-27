@@ -47,19 +47,30 @@ fun createSubagentTools(
                 required = listOf("title", "task"),
             )
         },
-        needsApproval = { true },
+        needsApproval = { false },
         execute = { raw ->
             val p = raw as JsonObject
             val title = p.str("title")?.trim().orEmpty()
             val task = p.str("task")?.trim().orEmpty()
             require(title.isNotEmpty()) { "title 必填" }
             require(task.isNotEmpty()) { "task 必填" }
-            val run = manager.spawn(parentId = parentId, title = title, task = task, context = p.str("context"))
-            listOf(UIMessagePart.Text(buildJsonObject {
-                put("id", run.id.toString())
-                put("title", run.title)
-                put("status", "running")
-            }.toString()))
+            val result = runCatching {
+                manager.spawn(parentId = parentId, title = title, task = task, context = p.str("context"))
+            }
+            result.fold(
+                onSuccess = { run ->
+                    listOf(UIMessagePart.Text(buildJsonObject {
+                        put("id", run.id.toString())
+                        put("title", run.title)
+                        put("status", "running")
+                    }.toString()))
+                },
+                onFailure = { e ->
+                    listOf(UIMessagePart.Text(buildJsonObject {
+                        put("error", "${e.javaClass.simpleName}: ${e.message}")
+                    }.toString()))
+                },
+            )
         },
     ),
     Tool(
