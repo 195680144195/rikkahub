@@ -62,7 +62,11 @@ internal fun buildCurlTool(): Tool = Tool(
                 })
                 put("body", buildJsonObject {
                     put("type", "string")
-                    put("description", "请求体：字符串原样发送；对象/数组会自动 JSON 序列化（推荐传对象）")
+                    put("description", "请求体：字符串原样发送；对象/数组会自动 JSON 序列化（也可用 json 参数传对象）")
+                })
+                put("json", buildJsonObject {
+                    put("type", "object")
+                    put("description", "JSON 对象请求体（body 的别名，二者选一）")
                 })
                 put("form", buildJsonObject {
                     put("type", "object")
@@ -184,6 +188,7 @@ internal fun buildCurlTool(): Tool = Tool(
                     listOf(UIMessagePart.Text(buildJsonObject {
                         put("url", url)
                         put("method", method)
+                        put("received", raw.toString().take(800))
                         put("status", page.status)
                         put("message", page.message)
                         put("finalUrl", page.finalUrl)
