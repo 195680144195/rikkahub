@@ -2,7 +2,7 @@ name: Build Kokona APK
 
 on:
   push:
-    branches: [master]
+    branches: [master, kokona]
   workflow_dispatch:
 
 jobs:
