@@ -94,7 +94,11 @@ internal fun buildCurlTool(): Tool = Tool(
         require(url.startsWith("http://") || url.startsWith("https://")) {
             "url 必须以 http:// 或 https:// 开头"
         }
-        val method = (params.str("method") ?: "GET").uppercase()
+        val form = (params["form"] ?: params["form_data"]) as? JsonObject
+        val bodyElement = params["body"] ?: params["json"] ?: params["data"]
+        // 没显式给 method 时：有 body/form 就按 POST，否则 GET
+        val method = (params.str("method")
+            ?: if (bodyElement != null || form != null) "POST" else "GET").uppercase()
         require(method in METHODS) { "不支持的 method: $method（支持 ${METHODS.joinToString()}）" }
 
         // 1) headers：值可以是字符串/数字/数组；Content-Type 单独抽出来给 RequestBody
@@ -109,8 +113,7 @@ internal fun buildCurlTool(): Tool = Tool(
         }
 
         // 2) body：对象/数组自动 JSON 化；form 优先
-        val form = params["form"] as? JsonObject
-        val bodyElement = params["body"]
+
         val formEncoded = if (form != null && form.isNotEmpty()) {
             form.entries.joinToString("&") { (k, v) -> "${encode(k)}=${encode(v.paramText())}" }
         } else null
