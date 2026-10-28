@@ -50,7 +50,7 @@ jobs:
               {
                 "client_info": {
                   "mobilesdk_app_id": "1:123456789000:android:1111111111111111",
-                  "android_client_info": { "package_name": "com.kokona.chat" }
+                  "android_client_info": { "package_name": "me.rerere.rikkahub" }
                 },
                 "oauth_client": [],
                 "api_key": [{ "current_key": "AIzaSyDUMMYKEYDUMMYKEYDUMMYKEYDUMMY000" }],
@@ -59,7 +59,7 @@ jobs:
               {
                 "client_info": {
                   "mobilesdk_app_id": "1:123456789000:android:2222222222222222",
-                  "android_client_info": { "package_name": "com.kokona.chat.debug" }
+                  "android_client_info": { "package_name": "me.rerere.rikkahub.debug" }
                 },
                 "oauth_client": [],
                 "api_key": [{ "current_key": "AIzaSyDUMMYKEYDUMMYKEYDUMMYKEYDUMMY000" }],
