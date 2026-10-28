@@ -2,10 +2,12 @@ package me.rerere.rikkahub.data.ai.tools.local
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -24,22 +26,24 @@ import java.util.concurrent.TimeUnit
 
 private const val CURL_MAX_BYTES = 2_000_000
 private const val CURL_DEFAULT_CHARS = 20_000
+private val METHODS = setOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD")
 
 /**
- * 完整的 HTTP 请求工具（curl 风格）。
+ * curl 风格的 HTTP 工具。
  *
- * 特点：不依赖工作区、不依赖搜索服务，任何助手打开开关即可用。
- * 支持方法 / 自定义请求头 / 原始 body / 表单 / 超时 / HTML 转文本。
+ * 关键点：
+ * - body 支持字符串、数字、对象、数组；对象/数组会自动 JSON 序列化（之前只接受字符串，POST 容易变成空体）
+ * - headers 的值支持字符串/数字/数组
+ * - Content-Type 既可来自 content_type，也可来自 headers，显式 headers 优先
+ * - 返回统一 JSON：status / headers / text / truncated
  */
 internal fun buildCurlTool(): Tool = Tool(
     name = "curl",
     description = """
         Send an HTTP request and return the response as readable text. Works without a workspace.
-        Supports GET/POST/PUT/PATCH/DELETE/HEAD, custom headers, raw body or urlencoded form,
-        redirects, timeout and HTML-to-text conversion. Use raw=true to keep HTML source.
-        NOT for downloading files: this tool only returns text (max 2MB, HTML converted to text),
-        it cannot save binary files. To download a file, run the system curl inside a workspace via
-        workspace_exec, e.g. `curl -L -o out.zip <url>`.
+        Supports GET/POST/PUT/PATCH/DELETE/HEAD, custom headers, JSON body (string or object), urlencoded form,
+        redirects, timeout and HTML-to-text conversion.
+        NOT for downloading files: only text is returned (max 2MB). Use the system curl inside a workspace for files.
     """.trimIndent().replace("\n", " "),
     parameters = {
         InputSchema.Obj(
@@ -58,15 +62,15 @@ internal fun buildCurlTool(): Tool = Tool(
                 })
                 put("body", buildJsonObject {
                     put("type", "string")
-                    put("description", "原始请求体（JSON/文本等），与 form 二选一")
+                    put("description", "请求体：字符串原样发送；对象/数组会自动 JSON 序列化（推荐传对象）")
                 })
                 put("form", buildJsonObject {
                     put("type", "object")
-                    put("description", "表单键值对，会以 application/x-www-form-urlencoded 发送")
+                    put("description", "表单键值对，发送为 application/x-www-form-urlencoded（与 body 二选一）")
                 })
                 put("content_type", buildJsonObject {
                     put("type", "string")
-                    put("description", "body 的 Content-Type，默认 application/json")
+                    put("description", "请求体类型，默认 application/json；headers 里的 Content-Type 优先")
                 })
                 put("timeout", buildJsonObject {
                     put("type", "integer")
@@ -78,7 +82,7 @@ internal fun buildCurlTool(): Tool = Tool(
                 })
                 put("raw", buildJsonObject {
                     put("type", "boolean")
-                    put("description", "true 返回原始响应，默认 false 会把 HTML 转成纯文本")
+                    put("description", "true 返回原始 HTML，默认会把 HTML 转成纯文本")
                 })
             },
             required = listOf("url"),
@@ -91,16 +95,44 @@ internal fun buildCurlTool(): Tool = Tool(
             "url 必须以 http:// 或 https:// 开头"
         }
         val method = (params.str("method") ?: "GET").uppercase()
-        require(method in setOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD")) {
-            "不支持的 method: $method"
+        require(method in METHODS) { "不支持的 method: $method（支持 ${METHODS.joinToString()}）" }
+
+        // 1) headers：值可以是字符串/数字/数组；Content-Type 单独抽出来给 RequestBody
+        var contentType = params.str("content_type") ?: "application/json"
+        val headerPairs = mutableListOf<Pair<String, String>>()
+        (params["headers"] as? JsonObject)?.forEach { (name, value) ->
+            val key = name.trim()
+            if (key.isEmpty()) return@forEach
+            if (key.equals("Content-Length", true) || key.equals("Host", true)) return@forEach
+            val text = value.headerText()
+            if (key.equals("Content-Type", true)) contentType = text else headerPairs += key to text
         }
-        val headers = params["headers"] as? JsonObject
+
+        // 2) body：对象/数组自动 JSON 化；form 优先
         val form = params["form"] as? JsonObject
-        val bodyText = params.str("body")
-        val contentType = params.str("content_type") ?: "application/json"
+        val bodyElement = params["body"]
+        val formEncoded = if (form != null && form.isNotEmpty()) {
+            form.entries.joinToString("&") { (k, v) -> "${encode(k)}=${encode(v.paramText())}" }
+        } else null
+        val bodyText: String? = when {
+            formEncoded != null -> formEncoded
+            bodyElement == null || bodyElement is JsonNull -> null
+            bodyElement is JsonPrimitive && bodyElement.isString -> bodyElement.content
+            else -> bodyElement.toString()
+        }
+        val effectiveContentType = if (formEncoded != null) "application/x-www-form-urlencoded" else contentType
+
+        if ((method == "GET" || method == "HEAD") && (bodyText != null || formEncoded != null)) {
+            return@Tool listOf(UIMessagePart.Text(buildJsonObject {
+                put("url", url)
+                put("method", method)
+                put("error", "$method 不支持请求体；请改用 POST/PUT/PATCH")
+            }.toString()))
+        }
+
         val timeoutSec = (params.str("timeout")?.toIntOrNull() ?: 20).coerceIn(1, 120)
         val maxChars = (params.str("max_chars")?.toIntOrNull() ?: CURL_DEFAULT_CHARS).coerceIn(500, 200_000)
-        val keepRaw = params["raw"]?.jsonPrimitive?.booleanOrNull ?: false
+        val keepRaw = params["raw"]?.paramBool() ?: false
 
         withContext(Dispatchers.IO) {
             val result = runCatching {
@@ -112,74 +144,56 @@ internal fun buildCurlTool(): Tool = Tool(
                     .followSslRedirects(true)
                     .build()
 
-                val requestBody = when {
-                    method == "GET" || method == "HEAD" -> null
-                    form != null && form.isNotEmpty() -> {
-                        val encoded = form.entries.joinToString("&") { (k, v) ->
-                            "${encode(k)}=${encode(v.jsonPrimitive.contentOrNull.orEmpty())}"
-                        }
-                        encoded.toRequestBody("application/x-www-form-urlencoded".toMediaTypeOrNull())
-                    }
-                    bodyText != null -> bodyText.toRequestBody(contentType.toMediaTypeOrNull())
-                    else -> "".toRequestBody(contentType.toMediaTypeOrNull())
+                val requestBody = if (method == "GET" || method == "HEAD") {
+                    null
+                } else {
+                    (bodyText ?: "").toRequestBody(effectiveContentType.toMediaTypeOrNull())
                 }
 
                 val builder = Request.Builder().url(url)
                 builder.header("User-Agent", "RikkaHub/curl-tool")
                 builder.header("Accept", "*/*")
-                headers?.forEach { (k, v) ->
-                    if (k.isNotBlank()) builder.header(k, v.jsonPrimitive.contentOrNull.orEmpty())
-                }
+                headerPairs.forEach { (k, v) -> builder.header(k, v) }
                 builder.method(method, requestBody)
 
                 client.newCall(builder.build()).execute().use { resp ->
-                    val bytes = ByteArrayOutputStream().also { out ->
-                        val input = resp.body?.byteStream()
-                        if (input != null) {
-                            input.use { ins ->
-                                val buf = ByteArray(16 * 1024)
-                                var total = 0
-                                while (total < CURL_MAX_BYTES) {
-                                    val n = ins.read(buf)
-                                    if (n <= 0) break
-                                    out.write(buf, 0, n)
-                                    total += n
-                                }
-                            }
-                        }
-                    }.toByteArray()
-
+                    val bytes = readLimited(resp.body?.byteStream(), CURL_MAX_BYTES)
                     val mediaType = resp.body?.contentType()
                     val charset = mediaType?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
-                    val textBody = runCatching { bytes.toString(charset) }
-                        .getOrElse { bytes.toString(Charsets.UTF_8) }
-                    val isHtml = mediaType?.subtype?.contains("html", true) == true
-
-                    Triple(resp, textBody, isHtml)
+                    Fetched(
+                        status = resp.code,
+                        message = resp.message,
+                        finalUrl = resp.request.url.toString(),
+                        contentType = resp.header("Content-Type").orEmpty(),
+                        headers = resp.headers.toMultimap(),
+                        bytes = bytes,
+                        charset = charset,
+                        isHtml = mediaType?.subtype?.contains("html", true) == true,
+                    )
                 }
-            }.map { (resp, text, isHtml) ->
-                val bodyOut = if (!keepRaw && isHtml) htmlToText(text) else text
-                val truncated = bodyOut.length > maxChars
-                val textOut = if (truncated) bodyOut.take(maxChars) + "\n...[truncated]" else bodyOut
-                buildJsonObject {
-                    put("url", url)
-                    put("method", method)
-                    put("status", resp.code)
-                    put("message", resp.message)
-                    put("finalUrl", resp.request.url.toString())
-                    put("contentType", resp.header("Content-Type").orEmpty())
-                    put("headers", buildJsonObject {
-                        resp.headers.toMultimap().forEach { (k, values) ->
-                            put(k, buildJsonArray { values.forEach { add(it) } })
-                        }
-                    })
-                    put("truncated", truncated)
-                    put("text", textOut)
-                }.toString()
             }
 
             result.fold(
-                onSuccess = { json -> listOf(UIMessagePart.Text(json)) },
+                onSuccess = { page ->
+                    val text = page.bytes.toString(page.charset)
+                    val bodyOut = if (!keepRaw && page.isHtml) htmlToText(text) else text
+                    val truncated = bodyOut.length > maxChars
+                    listOf(UIMessagePart.Text(buildJsonObject {
+                        put("url", url)
+                        put("method", method)
+                        put("status", page.status)
+                        put("message", page.message)
+                        put("finalUrl", page.finalUrl)
+                        put("contentType", page.contentType)
+                        put("headers", buildJsonObject {
+                            page.headers.forEach { (k, values) ->
+                                put(k, buildJsonArray { values.forEach { add(it) } })
+                            }
+                        })
+                        put("truncated", truncated)
+                        put("text", if (truncated) bodyOut.take(maxChars) + "\n...[truncated]" else bodyOut)
+                    }.toString()))
+                },
                 onFailure = { e ->
                     listOf(UIMessagePart.Text(buildJsonObject {
                         put("url", url)
@@ -192,11 +206,54 @@ internal fun buildCurlTool(): Tool = Tool(
     },
 )
 
-private fun encode(s: String): String =
-    java.net.URLEncoder.encode(s, "UTF-8")
+private class Fetched(
+    val status: Int,
+    val message: String,
+    val finalUrl: String,
+    val contentType: String,
+    val headers: Map<String, List<String>>,
+    val bytes: ByteArray,
+    val charset: java.nio.charset.Charset,
+    val isHtml: Boolean,
+)
+
+private fun readLimited(input: java.io.InputStream?, limit: Int): ByteArray {
+    if (input == null) return ByteArray(0)
+    val out = ByteArrayOutputStream()
+    input.use { ins ->
+        val buf = ByteArray(16 * 1024)
+        var total = 0
+        while (total < limit) {
+            val n = ins.read(buf)
+            if (n <= 0) break
+            val take = minOf(n, limit - total)
+            out.write(buf, 0, take)
+            total += take
+        }
+    }
+    return out.toByteArray()
+}
+
+private fun JsonElement.headerText(): String = when (this) {
+    is JsonArray -> joinToString(", ") { it.paramText() }
+    else -> paramText()
+}
+
+private fun JsonElement.paramText(): String = when (this) {
+    is JsonPrimitive -> contentOrNull ?: ""
+    is JsonNull -> ""
+    else -> toString()
+}
+
+private fun JsonElement.paramBool(): Boolean = when (this) {
+    is JsonPrimitive -> contentOrNull?.toBooleanStrictOrNull() ?: false
+    else -> false
+}
+
+private fun encode(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
 
 private fun JsonObject.str(name: String): String? =
-    this[name]?.jsonPrimitive?.contentOrNull
+    this[name]?.let { if (it is JsonPrimitive) it.contentOrNull else null }
 
 private fun htmlToText(html: String): String {
     var s = html
