@@ -134,7 +134,7 @@ internal fun buildCurlTool(): Tool = Tool(
         }
 
         val timeoutSec = (params.str("timeout")?.toIntOrNull() ?: 20).coerceIn(1, 120)
-        val maxChars = (params.str("max_chars")?.toIntOrNull() ?: CURL_DEFAULT_CHARS).coerceIn(500, 200_000)
+        val maxChars = (params.str("max_chars")?.toIntOrNull() ?: CURL_DEFAULT_CHARS).coerceIn(50, 200_000)
         val keepRaw = params["raw"]?.paramBool() ?: false
 
         withContext(Dispatchers.IO) {
