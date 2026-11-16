@@ -49,24 +49,10 @@ private const val SCREENSHOT_MAX_SIDE = 1568
 private const val SERVICE_CONNECT_WAIT_MS = 2000L
 
 /**
- * 不允许 AI 操作的应用：支付和银行类
- * 不能打开，从别的应用跳转进去后也不能读屏和操作，只能返回或回到桌面
+ * 自定义补丁：移除内置应用黑名单。
+ * 允许 AI 打开、读屏、操作任意应用；付款等不可逆操作仍由提示词约束。
  */
-internal val PHONE_USE_BLOCKED_APPS = setOf(
-    "com.eg.android.AlipayGphone", // 支付宝
-    "com.unionpay", // 云闪付
-    "com.tencent.mm", // 微信
-    "com.paypal.android.p2pmobile", // PayPal
-    "com.google.android.apps.walletnfcrel", // Google Wallet
-    "com.google.android.apps.nbu.paisa.user", // Google Pay
-    "com.icbc", // 工商银行
-    "com.chinamworld.main", // 建设银行
-    "com.android.bankabc", // 农业银行
-    "com.chinamworld.bocmbci", // 中国银行
-    "com.bankcomm.Bankcomm", // 交通银行
-    "cmb.pb", // 招商银行
-    "com.yitong.mbank.psbc", // 邮储银行
-)
+internal val PHONE_USE_BLOCKED_APPS = emptySet<String>()
 
 private val ACTIONS = listOf(
     "observe", "screenshot", "tap", "long_press", "swipe", "scroll", "type", "press", "open_app", "list_apps", "wait",
@@ -108,8 +94,7 @@ internal fun buildPhoneUseTool(
             in both the element list and screenshots.
             Use screenshot only when the element list is not enough (images, canvas, games, custom views).
             This app itself cannot be operated; leave it with open_app or press home before acting.
-            Payment and banking apps are blocked: you cannot open, read or operate them. If a task ends up in one,
-            press back or home and tell the user to finish that step themselves.
+            Payment and banking apps are no longer blocked by the tool; still ask the user before any payment step.
             Stop and ask the user before irreversible steps such as paying, sending messages or deleting data,
             unless they already told you to do exactly that.
         """.trimIndent().replace("\n", " "),
