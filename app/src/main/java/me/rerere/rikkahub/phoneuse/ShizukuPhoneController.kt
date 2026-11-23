@@ -7,8 +7,10 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.ParcelFileDescriptor
 import android.util.Xml
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import moe.shizuku.server.IShizukuService
 import rikka.shizuku.Shizuku
 import java.io.ByteArrayOutputStream
@@ -166,7 +168,9 @@ class ShizukuPhoneController(private val context: Context) : PhoneController {
                 val scrollable = parser.getAttributeValue(null, "scrollable") == "true"
                 val focused = parser.getAttributeValue(null, "focused") == "true"
                 val editable = cls.contains("EditText") || parser.getAttributeValue(null, "editable") == "true"
-                val checked = when (parser.getAttributeValue(null, "checked")) {
+                // uiautomator 给所有节点都写 checked=false，只有 checkable 才有意义
+                val checkable = parser.getAttributeValue(null, "checkable") == "true"
+                val checked = if (!checkable) null else when (parser.getAttributeValue(null, "checked")) {
                     "true" -> true
                     "false" -> false
                     else -> null
@@ -215,6 +219,25 @@ class ShizukuPhoneController(private val context: Context) : PhoneController {
         fun hasPermission(): Boolean = runCatching {
             Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
+
+        /** 申请授权并等待结果：授权成功返回 true，拒绝/超时返回 false */
+        suspend fun ensurePermission(context: Context, timeoutMs: Long = 10_000): Boolean {
+            if (!isAvailable()) return false
+            if (hasPermission()) return true
+            val deferred = CompletableDeferred<Boolean>()
+            val listener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+                if (!deferred.isCompleted) {
+                    deferred.complete(grantResult == PackageManager.PERMISSION_GRANTED)
+                }
+            }
+            Shizuku.addRequestPermissionResultListener(listener)
+            return try {
+                requestPermission(context)
+                withTimeoutOrNull(timeoutMs) { deferred.await() } ?: false
+            } finally {
+                Shizuku.removeRequestPermissionResultListener(listener)
+            }
+        }
 
         fun requestPermission(context: Context) {
             runCatching {

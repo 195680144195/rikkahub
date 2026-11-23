@@ -179,11 +179,10 @@ private class PhoneUseSession(
     /** Shizuku 可用且已授权时优先用它；否则回退到无障碍 */
     private suspend fun resolveController(): PhoneController {
         if (ShizukuPhoneController.isAvailable()) {
-            if (ShizukuPhoneController.hasPermission()) {
+            // 先申请并等待授权；拒绝/超时/没装都回退到无障碍
+            if (ShizukuPhoneController.ensurePermission(context)) {
                 return shizukuController ?: ShizukuPhoneController(context).also { shizukuController = it }
             }
-            ShizukuPhoneController.requestPermission(context)
-            error("Shizuku 已安装但尚未授权，已弹出授权请求；请允许后重新调用。")
         }
         return manager.controller.value ?: awaitController()
     }
