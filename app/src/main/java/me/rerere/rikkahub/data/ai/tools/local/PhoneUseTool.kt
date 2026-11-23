@@ -1,5 +1,7 @@
 package me.rerere.rikkahub.data.ai.tools.local
 
+import android.content.Context
+
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,7 @@ import me.rerere.rikkahub.phoneuse.PhoneElement
 import me.rerere.rikkahub.phoneuse.PhoneKey
 import me.rerere.rikkahub.phoneuse.PhoneScreen
 import me.rerere.rikkahub.phoneuse.PhoneUseManager
+import me.rerere.rikkahub.phoneuse.ShizukuPhoneController
 
 const val PHONE_USE_TOOL_NAME = "phone_use"
 
@@ -68,6 +71,7 @@ fun phoneUseActionOf(input: String): String? = runCatching {
  * [isCheckedInSystem] 是系统无障碍设置里有没有勾选，用来区分「没开」和「开了但被系统停掉」。
  */
 internal fun buildPhoneUseTool(
+    context: Context,
     ownPackageName: String,
     manager: PhoneUseManager,
     saveScreenshot: (ByteArray) -> String,
@@ -76,6 +80,7 @@ internal fun buildPhoneUseTool(
     isSelfInForeground: suspend () -> Boolean = ::isAppInForeground,
 ): Tool {
     val session = PhoneUseSession(
+        context,
         ownPackageName,
         manager,
         saveScreenshot,
@@ -155,6 +160,7 @@ private suspend fun isAppInForeground(): Boolean = withContext(Dispatchers.Main)
 }
 
 private class PhoneUseSession(
+    private val context: Context,
     private val ownPackageName: String,
     private val manager: PhoneUseManager,
     private val saveScreenshot: (ByteArray) -> String,
@@ -167,6 +173,20 @@ private class PhoneUseSession(
 
     // 元素编号和坐标换算都以模型最后看到的那份为准
     private var lastScreen: PhoneScreen? = null
+
+    private var shizukuController: ShizukuPhoneController? = null
+
+    /** Shizuku 可用且已授权时优先用它；否则回退到无障碍 */
+    private suspend fun resolveController(): PhoneController {
+        if (ShizukuPhoneController.isAvailable()) {
+            if (ShizukuPhoneController.hasPermission()) {
+                return shizukuController ?: ShizukuPhoneController(context).also { shizukuController = it }
+            }
+            ShizukuPhoneController.requestPermission(context)
+            error("Shizuku 已安装但尚未授权，已弹出授权请求；请允许后重新调用。")
+        }
+        return manager.controller.value ?: awaitController()
+    }
 
     private suspend fun awaitController(): PhoneController {
         check(isCheckedInSystem()) {
@@ -186,7 +206,7 @@ private class PhoneUseSession(
             "The background floating window is turned off, so the user cannot watch or stop you. " +
                 "Ask them to turn it on in Settings > Notifications (and grant the overlay permission) first."
         }
-        val controller = manager.controller.value ?: awaitController()
+        val controller = resolveController()
         when (val action = params.string("action") ?: error("action is required")) {
             "list_apps" -> text(
                 controller.listApps()

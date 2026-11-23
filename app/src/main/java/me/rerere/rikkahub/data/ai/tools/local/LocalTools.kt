@@ -40,6 +40,7 @@ class LocalTools(
 
     val phoneUseTool by lazy {
         buildPhoneUseTool(
+            context = context,
             ownPackageName = context.packageName,
             manager = phoneUseManager,
             isFloatingWindowOn = { isFloatingChatWindowOn(context, settingsStore.settingsFlow.value) },
